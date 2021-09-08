@@ -14271,8 +14271,7 @@ a.anchor-link {
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>Table of Contents</p>
-<ul>
+<h3 id="Table-of-Contents">Table of Contents<a class="anchor-link" href="#Table-of-Contents">&#182;</a></h3><ul>
 <li><a href="#Demonstration"><strong>Demonstration</strong></a><ul>
 <li><a href="#Loading-the-data-chunks"><strong>Loading the data chunks</strong></a></li>
 <li><a href="#Merging-dataframes"><strong>Merging dataframes</strong></a></li>
@@ -14299,7 +14298,7 @@ a.anchor-link {
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Task:">Task:<a class="anchor-link" href="#Task:">&#182;</a></h3><p>Previously, we have divided our dataset into 17 different chunks, since a pandas dataframe cannot handle all 16 million rows at once.  We have also cleaned these chunks, which has helped to remove irrelevant data points.  Compared to the original 16 million rows, our cleaned data should be much smaller.</p>
+<h3 id="Task:">Task:<a class="anchor-link" href="#Task:">&#182;</a></h3><p>Previously, we have divided our dataset into 17 different chunks.  We divided the dataset because a pandas dataframe cannot handle all 16 million rows at once.  We have also cleaned these chunks, which has helped to remove irrelevant data points.  Compared to the original 16 million rows, our cleaned data should be much smaller.</p>
 <p>Now, we want to consolidate all this data into a single dataframe to use in our model.</p>
 
 </div>
@@ -14326,7 +14325,7 @@ a.anchor-link {
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <ul>
-<li>We will use <strong>pandas</strong> in order to load our data into a dataframe for manipulation</li>
+<li>We will use <strong>pandas</strong> for loading our data into a dataframe for manipulation</li>
 </ul>
 
 </div>
@@ -14708,7 +14707,7 @@ df2 min date:  2018-02-06 | df2 max date:  2018-10-01
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>We are going to merge the two dataframes instead of simply concatenating them because we want the overlapping dates to not be in duplcate rows.  We will merge using an outer join because we want to keep the data of unmerged rows from both dataframes.</p>
+<p>We are going to merge the two dataframes instead of simply concatenating them because we want the overlapping dates to not be in duplcate rows.  We will merge using an outer join because we want to keep the data of unmerged rows from <strong>both</strong> dataframes.</p>
 
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
@@ -15590,7 +15589,7 @@ Merging chunk number:  17
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="By-using-pandas-DataFrame.pivot-function,-we-can-get-exactly-what-we-want">By using pandas <code>DataFrame.pivot</code> function, we can get exactly what we want<a class="anchor-link" href="#By-using-pandas-DataFrame.pivot-function,-we-can-get-exactly-what-we-want">&#182;</a></h3>
+<h3 id="By-using-the-pandas-DataFrame.pivot-function,-we-can-get-exactly-what-we-want">By using the pandas <code>DataFrame.pivot</code> function, we can get exactly what we want<a class="anchor-link" href="#By-using-the-pandas-DataFrame.pivot-function,-we-can-get-exactly-what-we-want">&#182;</a></h3>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
@@ -15750,7 +15749,7 @@ Merging chunk number:  17
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<blockquote><p>By setting the <code>date</code> column to be the new index, the <code>sentiment</code> categories to be the new columns, and the <code>total</code> column to be the values.  We get the dataframe above</p>
+<blockquote><p>By setting the <code>date</code> column to be the new index, the <code>sentiment</code> categories to be the new columns, and the <code>total</code> column to be the values.  We get the dataframe above.</p>
 </blockquote>
 
 </div>

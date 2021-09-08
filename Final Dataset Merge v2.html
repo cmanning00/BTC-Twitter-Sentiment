@@ -3,7 +3,7 @@
 <head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Bitcoin Tweet Data Processing</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>Final Dataset Merge v2</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 
 
 
@@ -14259,55 +14259,40 @@ a.anchor-link {
 
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h1 id="Bitcoin-Tweet-Data-Processing">Bitcoin Tweet Data Processing<a class="anchor-link" href="#Bitcoin-Tweet-Data-Processing">&#182;</a></h1><p>Colton Manning</p>
+<h1 id="Final-Dataset-Merge">Final Dataset Merge<a class="anchor-link" href="#Final-Dataset-Merge">&#182;</a></h1><p>Colton Manning</p>
 
 </div>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>In this notebook, we are going to clean a dataset of 16 million tweets containing 'bitcoin' or 'BTC' from 2016-01-01 to 2019-03-29.  This dataset will be used to help us predict bitcoin price movement.</p>
+<p>So far, we have cleaned a dataset of various tweets relating to bitcoin.  We have also cleaned a dataset of bitcoin market data and added a column indicating if the price increased the next day.  In this notebook, we are going to combine those two datasets to use in our model.</p>
 
 </div>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <h3 id="Table-of-Contents">Table of Contents<a class="anchor-link" href="#Table-of-Contents">&#182;</a></h3><ul>
-<li><a href="#Data-Cleaning"><strong>Data Cleaning</strong></a><ul>
-<li><a href="#First-let&#39;s-take-a-look-at-the-data"><strong>Data</strong></a></li>
-<li><a href="#Tweet-selection"><strong>Tweet selection</strong></a></li>
-<li><a href="#Tweet-cleaning"><strong>Tweet cleaning</strong></a></li>
-</ul>
-</li>
-<li><a href="#Tweet-Sentiment"><strong>Tweet Sentiment</strong></a></li>
-<li><a href="#Pandas-Groupby"><strong>Pandas Groupby</strong></a><ul>
-<li><a href="#Dataframe-merge"><strong>Dataframe merge</strong></a></li>
-</ul>
-</li>
-<li><a href="#Cleaning-in-chunks"><strong>Cleaning in chunks</strong></a></li>
+<li><a href="#Importing-Data"><strong>Importing Data</strong></a></li>
+<li><a href="#Adding-some-columns"><strong>Adding Columns</strong></a></li>
+<li><a href="#Merging"><strong>Merging</strong></a></li>
+<li><a href="#Export-Data"><strong>Export Data</strong></a></li>
 </ul>
 
 </div>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<hr>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Importing-relevant-libraries:">Importing relevant libraries:<a class="anchor-link" href="#Importing-relevant-libraries:">&#182;</a></h3>
+<h3 id="Importing-relevant-libraries">Importing relevant libraries<a class="anchor-link" href="#Importing-relevant-libraries">&#182;</a></h3>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[28]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">datetime</span> <span class="k">as</span> <span class="nn">dt</span>
-<span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">from</span> <span class="nn">textblob</span> <span class="kn">import</span> <span class="n">TextBlob</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">MinMaxScaler</span>
 </pre></div>
 
      </div>
@@ -14320,35 +14305,24 @@ a.anchor-link {
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <ul>
 <li>We will use <strong>pandas</strong> in order to load our data into a dataframe for manipulation</li>
-<li>We will use <strong>datetime</strong> for extracting dates from timestamps</li>
-<li>We will use <strong>re</strong> for regex</li>
-<li>We will use <strong>textblob</strong> for text sentiment</li>
+<li>We will use <strong>numpy</strong> for data manipulation as well</li>
+<li>We will use <strong>sklearn</strong> in order to scale our data</li>
 </ul>
 
 </div>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h2 id="Data-Cleaning">Data Cleaning<a class="anchor-link" href="#Data-Cleaning">&#182;</a></h2>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="First-let's-take-a-look-at-the-data">First let's take a look at the data<a class="anchor-link" href="#First-let's-take-a-look-at-the-data">&#182;</a></h3>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>We are only loading in 100,000 rows at first because pandas cannot handle all 16 million rows at once</p>
-
+<h2 id="Importing-Data">Importing Data<a class="anchor-link" href="#Importing-Data">&#182;</a></h2>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[29]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/tweets_original.csv&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">nrows</span> <span class="o">=</span> <span class="mi">100000</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">BTC_tweets</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../Cleaned_Data/Bitcoin_chunk_clean.csv&#39;</span><span class="p">)</span>
+<span class="n">BTC_price</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../Cleaned_Data/Bitcoin_market_clean.csv&#39;</span><span class="p">)</span>
 </pre></div>
 
      </div>
@@ -14359,10 +14333,10 @@ a.anchor-link {
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[30]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">BTC_tweets</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 
      </div>
@@ -14378,57 +14352,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-
-
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>&lt;class &#39;pandas.core.frame.DataFrame&#39;&gt;
-RangeIndex: 100000 entries, 0 to 99999
-Data columns (total 9 columns):
- #   Column     Non-Null Count   Dtype 
----  ------     --------------   ----- 
- 0   id         100000 non-null  int64 
- 1   user       100000 non-null  object
- 2   fullname   99997 non-null   object
- 3   url        3322 non-null    object
- 4   timestamp  100000 non-null  object
- 5   replies    100000 non-null  int64 
- 6   likes      100000 non-null  int64 
- 7   retweets   100000 non-null  int64 
- 8   text       100000 non-null  object
-dtypes: int64(4), object(5)
-memory usage: 6.9+ MB
-</pre>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[31]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[31]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
 
 
 
@@ -14451,77 +14375,71 @@ memory usage: 6.9+ MB
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>id</th>
-      <th>user</th>
-      <th>fullname</th>
-      <th>url</th>
-      <th>timestamp</th>
-      <th>replies</th>
-      <th>likes</th>
-      <th>retweets</th>
-      <th>text</th>
+      <th>Unnamed: 0</th>
+      <th>date</th>
+      <th>negative</th>
+      <th>neutral</th>
+      <th>positive</th>
+      <th>percent_neg</th>
+      <th>percent_neu</th>
+      <th>percent_pos</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>1132977055300300800</td>
-      <td>KamdemAbdiel</td>
-      <td>Abdiel kamdem</td>
-      <td>NaN</td>
-      <td>2019-05-27 11:49:14+00</td>
       <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>È appena uscito un nuovo video! LES CRYPTOMONN...</td>
+      <td>2016-01-01</td>
+      <td>32.0</td>
+      <td>322.0</td>
+      <td>38.0</td>
+      <td>0.081633</td>
+      <td>0.821429</td>
+      <td>0.096939</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>1132977073402736640</td>
-      <td>bitcointe</td>
-      <td>Bitcointe</td>
-      <td>NaN</td>
-      <td>2019-05-27 11:49:18+00</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>Cardano: Digitize Currencies; EOS https://t.co...</td>
+      <td>1</td>
+      <td>2016-01-02</td>
+      <td>39.0</td>
+      <td>222.0</td>
+      <td>17.0</td>
+      <td>0.140288</td>
+      <td>0.798561</td>
+      <td>0.061151</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>1132977023893139456</td>
-      <td>3eyedbran</td>
-      <td>Bran - 3 Eyed Raven</td>
-      <td>NaN</td>
-      <td>2019-05-27 11:49:06+00</td>
-      <td>0</td>
       <td>2</td>
-      <td>1</td>
-      <td>Another Test tweet that wasn't caught in the s...</td>
+      <td>2016-01-03</td>
+      <td>36.0</td>
+      <td>142.0</td>
+      <td>3.0</td>
+      <td>0.198895</td>
+      <td>0.784530</td>
+      <td>0.016575</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>1132977089089556481</td>
-      <td>DetroitCrypto</td>
-      <td>J. Scardina</td>
-      <td>NaN</td>
-      <td>2019-05-27 11:49:22+00</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>Current Crypto Prices! \n\nBTC: $8721.99 USD\n...</td>
+      <td>3</td>
+      <td>2016-01-04</td>
+      <td>38.0</td>
+      <td>165.0</td>
+      <td>5.0</td>
+      <td>0.182692</td>
+      <td>0.793269</td>
+      <td>0.024038</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>1132977092340191232</td>
-      <td>mmursaleen72</td>
-      <td>Muhammad Mursaleen</td>
-      <td>NaN</td>
-      <td>2019-05-27 11:49:23+00</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>Spiv (Nosar Baz): BITCOIN Is An Asset &amp;amp; NO...</td>
+      <td>4</td>
+      <td>2016-01-05</td>
+      <td>36.0</td>
+      <td>122.0</td>
+      <td>4.0</td>
+      <td>0.222222</td>
+      <td>0.753086</td>
+      <td>0.024691</td>
     </tr>
   </tbody>
 </table>
@@ -14534,75 +14452,13 @@ memory usage: 6.9+ MB
 
 </div>
 
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>As you can see in the output above, this dataset has 9 columns:</p>
-<ul>
-<li><code>id</code> - the tweet's id number</li>
-<li><code>user</code> - the user's twitter handle</li>
-<li><code>fullname</code> the name of the user</li>
-<li><code>url</code> - the tweet's url</li>
-<li><code>timestamp</code> - the time the tweet was created</li>
-<li><code>replies</code> - the number of replies</li>
-<li><code>likes</code> - the number of likes</li>
-<li><code>retweets</code> - the number of retweets</li>
-<li><code>text</code> - the text content of the tweet</li>
-</ul>
-<p>The columns that we are primarily interested in are the <code>timestamp</code> and <code>text</code> columns</p>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Let's-make-sure-that-python-recognizes-the-timestamp-column-as-a-datetime-object">Let's make sure that python recognizes the <code>timestamp</code> column as a datetime object<a class="anchor-link" href="#Let's-make-sure-that-python-recognizes-the-timestamp-column-as-a-datetime-object">&#182;</a></h3>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[32]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;timestamp&quot;</span><span class="p">])</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>Now we can extract the date from our <code>datetime</code> column.  For the purposes of our model, we only need the day the tweet was created and not the specific timestamp.</p>
-
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[33]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Tweet-selection">Tweet selection<a class="anchor-link" href="#Tweet-selection">&#182;</a></h3>
-</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[34]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">BTC_price</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 
      </div>
@@ -14618,76 +14474,7 @@ memory usage: 6.9+ MB
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[34]:</div>
-
-
-
-
-<div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
-<pre>0    È appena uscito un nuovo video! LES CRYPTOMONN...
-1    Cardano: Digitize Currencies; EOS https://t.co...
-2    Another Test tweet that wasn&#39;t caught in the s...
-3    Current Crypto Prices! \n\nBTC: $8721.99 USD\n...
-4    Spiv (Nosar Baz): BITCOIN Is An Asset &amp;amp; NO...
-Name: text, dtype: object</pre>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h4 id="It-looks-like-this-dataset-includes-tweets-in-other-languages.--Let-select-only-the-tweets-that-are-in-english">It looks like this dataset includes tweets in other languages.  Let select only the tweets that are in english<a class="anchor-link" href="#It-looks-like-this-dataset-includes-tweets-in-other-languages.--Let-select-only-the-tweets-that-are-in-english">&#182;</a></h4>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>We first need to make sure the text column's data type is a string.  Then, we can find the rows with english tweets by checking to see if they contain all ASCII characters.  These are characters in the english language, so any tweet that has characters from another language will be marked as false.</p>
-<p>Although this method is not perfect, it does a pretty good job at identifying the english tweets.  This should help improve our sentiment analysis results as well.</p>
-
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[35]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
-<span class="n">df</span><span class="p">[</span><span class="s2">&quot;english&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">isascii</span><span class="p">())</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[36]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">english</span> <span class="o">==</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="s1">&#39;english&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[36]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[4]:</div>
 
 
 
@@ -14710,134 +14497,59 @@ Name: text, dtype: object</pre>
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>text</th>
-      <th>english</th>
+      <th>Unnamed: 0</th>
+      <th>date</th>
+      <th>Open</th>
+      <th>Close</th>
+      <th>price_change</th>
+      <th>price_increase_next_day</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>È appena uscito un nuovo video! LES CRYPTOMONN...</td>
+      <td>0</td>
+      <td>2016-01-01</td>
+      <td>430.89</td>
+      <td>433.82</td>
+      <td>2.93</td>
       <td>False</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>Cardano: Digitize Currencies; EOS https://t.co...</td>
+      <td>1</td>
+      <td>2016-01-02</td>
+      <td>434.87</td>
+      <td>433.55</td>
+      <td>-1.32</td>
       <td>False</td>
     </tr>
-    <tr>
-      <th>5</th>
-      <td>#btc inceldiği yerden kopsun bakalım 17:00 ye ...</td>
-      <td>False</td>
-    </tr>
-    <tr>
-      <th>7</th>
-      <td>@pedronauck como investidor, vc é um ótimo dev...</td>
-      <td>False</td>
-    </tr>
-    <tr>
-      <th>8</th>
-      <td>ブラジルはまぁ置いといてもドイツは存在感出してくるのかな。ロシアもマイニングなどで元気になる...</td>
-      <td>False</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[37]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_subset</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">english</span> <span class="o">==</span> <span class="kc">True</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;english&quot;</span><span class="p">]]</span>
-<span class="n">df_subset</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[37]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>date</th>
-      <th>text</th>
-      <th>english</th>
-    </tr>
-  </thead>
-  <tbody>
     <tr>
       <th>2</th>
-      <td>1132977023893139456</td>
-      <td>2019-05-27</td>
-      <td>Another Test tweet that wasn't caught in the s...</td>
+      <td>2</td>
+      <td>2016-01-03</td>
+      <td>433.20</td>
+      <td>431.04</td>
+      <td>-2.16</td>
       <td>True</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>1132977089089556481</td>
-      <td>2019-05-27</td>
-      <td>Current Crypto Prices! \n\nBTC: $8721.99 USD\n...</td>
-      <td>True</td>
+      <td>3</td>
+      <td>2016-01-04</td>
+      <td>431.54</td>
+      <td>434.17</td>
+      <td>2.63</td>
+      <td>False</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>1132977092340191232</td>
-      <td>2019-05-27</td>
-      <td>Spiv (Nosar Baz): BITCOIN Is An Asset &amp;amp; NO...</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td>1132977101638897665</td>
-      <td>2019-05-27</td>
-      <td>@nwoodfine We have been building on the real #...</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>9</th>
-      <td>1132977132714561536</td>
-      <td>2019-05-27</td>
-      <td>CHANGE IS COMING...GET READY!!! Boom, Another ...</td>
-      <td>True</td>
+      <td>4</td>
+      <td>2016-01-05</td>
+      <td>433.31</td>
+      <td>432.43</td>
+      <td>-0.88</td>
+      <td>False</td>
     </tr>
   </tbody>
 </table>
@@ -14853,220 +14565,25 @@ Name: text, dtype: object</pre>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h4 id="Let's-also-make-sure-we-don't-have-any-tweets-earlier-than-2016">Let's also make sure we don't have any tweets earlier than 2016<a class="anchor-link" href="#Let's-also-make-sure-we-don't-have-any-tweets-earlier-than-2016">&#182;</a></h4>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[38]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;date minimum&#39;</span><span class="p">,</span> <span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;date maximum&#39;</span><span class="p">,</span> <span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-
-
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>date minimum 2009-01-11
-date maximum 2019-05-27
-</pre>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[39]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_subset</span><span class="p">[</span><span class="n">df_subset</span><span class="o">.</span><span class="n">date</span> <span class="o">&lt;</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[39]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>date</th>
-      <th>text</th>
-      <th>english</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>21</th>
-      <td>1110302988</td>
-      <td>2009-01-11</td>
-      <td>Running bitcoin</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>48216</th>
-      <td>269688013028728832</td>
-      <td>2012-11-17</td>
-      <td>otw BTC, on lagi jam 16.00 Insya Allah :D</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>48487</th>
-      <td>368464930690699264</td>
-      <td>2013-08-16</td>
-      <td>#BTCQ5 If Leah went into BTC and spent $160.00...</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>49170</th>
-      <td>495297978374950913</td>
-      <td>2014-08-01</td>
-      <td>Last: 0.00000137 BTC\nMarket Cap: $92,409.00  ...</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>49293</th>
-      <td>517947008858877952</td>
-      <td>2014-10-03</td>
-      <td>Last: 0.00000148 BTC\nMarket Cap: $69,112.18 U...</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>49583</th>
-      <td>566687556108963840</td>
-      <td>2015-02-14</td>
-      <td>buysellbitco.in #bitcoin price in INR, Buy : 1...</td>
-      <td>True</td>
-    </tr>
-    <tr>
-      <th>51386</th>
-      <td>667365048507957248</td>
-      <td>2015-11-19</td>
-      <td>Re: Banning bitcoin. \n\nThe picture below con...</td>
-      <td>True</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>We shouldn't have any tweets earlier than 2016 according to the data source, so let's get rid of those</p>
-
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[40]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_subset</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[</span><span class="n">df_subset</span><span class="o">.</span><span class="n">date</span> <span class="o">&gt;=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;date minimum&#39;</span><span class="p">,</span> <span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;date maximum&#39;</span><span class="p">,</span> <span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-
-
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>date minimum 2017-01-04
-date maximum 2019-05-27
-</pre>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Tweet-cleaning">Tweet cleaning<a class="anchor-link" href="#Tweet-cleaning">&#182;</a></h3>
+<h2 id="Adding-some-columns">Adding some columns<a class="anchor-link" href="#Adding-some-columns">&#182;</a></h2>
 </div>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>Let's clean up these tweets a bit to give us better sentiment results.  The lambda function below removes links and special characters.</p>
-
+<h3 id="Scaling-value-for-price_change">Scaling value for <code>price_change</code><a class="anchor-link" href="#Scaling-value-for-price_change">&#182;</a></h3>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[41]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">clean_tweet</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;(@[A-Za-z0-9]+)|([^0-9A-Za-z </span><span class="se">\t</span><span class="s2">])|(\w+:\/\/\S+)&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
-<span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;clean_text&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_subset</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">clean_tweet</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">BTC_price</span><span class="o">.</span><span class="n">price_change</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">scaler</span> <span class="o">=</span> <span class="n">MinMaxScaler</span><span class="p">(</span><span class="n">feature_range</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">scaled_data</span> <span class="o">=</span> <span class="n">scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+<span class="n">BTC_price</span><span class="p">[</span><span class="s1">&#39;price_chng_max_abs_scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scaled_data</span>
 </pre></div>
 
      </div>
@@ -15077,529 +14594,22 @@ date maximum 2019-05-27
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<hr>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h2 id="Tweet-Sentiment">Tweet Sentiment<a class="anchor-link" href="#Tweet-Sentiment">&#182;</a></h2>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="First,-let's-make-a-function-to-analyze-a-tweet's-sentiment">First, let's make a function to analyze a tweet's sentiment<a class="anchor-link" href="#First,-let's-make-a-function-to-analyze-a-tweet's-sentiment">&#182;</a></h3>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[42]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">get_tweet_sentiment</span><span class="p">(</span><span class="n">tweet</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Classify sentiment of a tweet using textblob</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="c1"># create TextBlob object of passed tweet</span>
-        <span class="n">analysis</span> <span class="o">=</span> <span class="n">TextBlob</span><span class="p">(</span><span class="n">tweet</span><span class="p">)</span>
-        <span class="c1"># set sentiment</span>
-        <span class="k">if</span> <span class="n">analysis</span><span class="o">.</span><span class="n">sentiment</span><span class="o">.</span><span class="n">polarity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s1">&#39;positive&#39;</span>
-        <span class="k">elif</span> <span class="n">analysis</span><span class="o">.</span><span class="n">sentiment</span><span class="o">.</span><span class="n">polarity</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s1">&#39;neutral&#39;</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s1">&#39;negative&#39;</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Now-we-apply-the-function-to-each-of-the-text-rows">Now we apply the function to each of the <code>text</code> rows<a class="anchor-link" href="#Now-we-apply-the-function-to-each-of-the-text-rows">&#182;</a></h3>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[43]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;sentiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_subset</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">get_tweet_sentiment</span><span class="p">)</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p><strong>Positive Tweets:</strong></p>
-
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[44]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_subset</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df_subset</span><span class="o">.</span><span class="n">sentiment</span> <span class="o">==</span> <span class="s1">&#39;positive&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">]][:</span><span class="mi">5</span><span class="p">]</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[44]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>date</th>
-      <th>text</th>
-      <th>sentiment</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>9</th>
-      <td>2019-05-27</td>
-      <td>CHANGE IS COMING...GET READY!!! Boom, Another ...</td>
-      <td>positive</td>
-    </tr>
-    <tr>
-      <th>10</th>
-      <td>2019-05-27</td>
-      <td>One of the useful articles of Stefan; here is ...</td>
-      <td>positive</td>
-    </tr>
-    <tr>
-      <th>11</th>
-      <td>2019-05-21</td>
-      <td>BTC IS STILL GOING STRONG!!\n\nThus, we are gi...</td>
-      <td>positive</td>
-    </tr>
-    <tr>
-      <th>17</th>
-      <td>2019-05-27</td>
-      <td>#Countdown #ComingSoon The $QLC airdrop, #Q_Ga...</td>
-      <td>positive</td>
-    </tr>
-    <tr>
-      <th>19</th>
-      <td>2019-05-27</td>
-      <td>BTC IS GOING CRAZYYY!\n\nThus, we are giving a...</td>
-      <td>positive</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p><strong>Neutral Tweets:</strong></p>
-
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[45]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_subset</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df_subset</span><span class="o">.</span><span class="n">sentiment</span> <span class="o">==</span> <span class="s1">&#39;neutral&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">]][:</span><span class="mi">5</span><span class="p">]</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[45]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>date</th>
-      <th>text</th>
-      <th>sentiment</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2</th>
-      <td>2019-05-27</td>
-      <td>Another Test tweet that wasn't caught in the s...</td>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>2019-05-27</td>
-      <td>Current Crypto Prices! \n\nBTC: $8721.99 USD\n...</td>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>2019-05-27</td>
-      <td>Spiv (Nosar Baz): BITCOIN Is An Asset &amp;amp; NO...</td>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>12</th>
-      <td>2019-05-22</td>
-      <td>BestMixer has been seized by the Dutch Police ...</td>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>15</th>
-      <td>2019-05-10</td>
-      <td>share</td>
-      <td>neutral</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p><strong>Negative Tweets:</strong></p>
-
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[46]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_subset</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df_subset</span><span class="o">.</span><span class="n">sentiment</span> <span class="o">==</span> <span class="s1">&#39;negative&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">]][:</span><span class="mi">5</span><span class="p">]</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[46]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>date</th>
-      <th>text</th>
-      <th>sentiment</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>6</th>
-      <td>2019-05-27</td>
-      <td>@nwoodfine We have been building on the real #...</td>
-      <td>negative</td>
-    </tr>
-    <tr>
-      <th>18</th>
-      <td>2019-05-27</td>
-      <td>You have roughly 6 days left to get your #Laun...</td>
-      <td>negative</td>
-    </tr>
-    <tr>
-      <th>31</th>
-      <td>2019-05-27</td>
-      <td>@APompliano If by Bitcoin you mean BSV, I full...</td>
-      <td>negative</td>
-    </tr>
-    <tr>
-      <th>93</th>
-      <td>2019-05-26</td>
-      <td>No, you're really not. This is gaslighting bul...</td>
-      <td>negative</td>
-    </tr>
-    <tr>
-      <th>209</th>
-      <td>2019-05-27</td>
-      <td>@mohikandan @whalepool @saifedean @TuurDemeest...</td>
-      <td>negative</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<hr>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h2 id="Pandas-Groupby">Pandas Groupby<a class="anchor-link" href="#Pandas-Groupby">&#182;</a></h2>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Now-that-we-have-the-tweet-sentiment,-we-can-group-the-data-to-get-sentiment-totals">Now that we have the tweet sentiment, we can group the data to get sentiment totals<a class="anchor-link" href="#Now-that-we-have-the-tweet-sentiment,-we-can-group-the-data-to-get-sentiment-totals">&#182;</a></h3>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[48]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_groupby</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
-<span class="n">df_groupby</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[48]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>date</th>
-      <th>sentiment</th>
-      <th>id</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>2017-01-04</td>
-      <td>neutral</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>2017-01-27</td>
-      <td>neutral</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>2017-02-04</td>
-      <td>positive</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>2017-02-06</td>
-      <td>neutral</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>2017-05-24</td>
-      <td>positive</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>605</th>
-      <td>2019-05-26</td>
-      <td>neutral</td>
-      <td>18</td>
-    </tr>
-    <tr>
-      <th>606</th>
-      <td>2019-05-26</td>
-      <td>positive</td>
-      <td>23</td>
-    </tr>
-    <tr>
-      <th>607</th>
-      <td>2019-05-27</td>
-      <td>negative</td>
-      <td>98</td>
-    </tr>
-    <tr>
-      <th>608</th>
-      <td>2019-05-27</td>
-      <td>neutral</td>
-      <td>670</td>
-    </tr>
-    <tr>
-      <th>609</th>
-      <td>2019-05-27</td>
-      <td>positive</td>
-      <td>443</td>
-    </tr>
-  </tbody>
-</table>
-<p>610 rows × 3 columns</p>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<blockquote><p>It looks like our groupby worked!  We can now see the total number of positive, negative, and neutral tweets for each day in the dataset.  However, now we have a problem.  For dates that have 0 tweets in a certain sentiment category (e.g. there are 0 negative tweets on 2017-01-04), we want this to show up as 0 in the dataframe.  But, the <code>groupby</code> function will not display these categories since they don't appear for those dates.  So, we have to find a way to incorporate these missing categories</p>
+<blockquote><p>The code above converts the price change values to be on a scale from -1 to +1.  So, days where the price went down significantly will be closer to -1 and days where the price increased significantly will be closer to +1.  This could potentially help with our model since the price of bitcoin has risen dramatically over the past few years.  Scaling the price change to a smaller range [-1,1] could be beneficial</p>
 </blockquote>
 
 </div>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Dataframe-merge">Dataframe merge<a class="anchor-link" href="#Dataframe-merge">&#182;</a></h3>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h4 id="Building-two-dataframes---one-with-each-unique-date-and-another-with-each-sentiment-type">Building two dataframes - one with each unique date and another with each sentiment type<a class="anchor-link" href="#Building-two-dataframes---one-with-each-unique-date-and-another-with-each-sentiment-type">&#182;</a></h4>
+<h3 id="Adding-percent-change-column-for-price">Adding percent change column for price<a class="anchor-link" href="#Adding-percent-change-column-for-price">&#182;</a></h3>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[72]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[6]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_temp</span> <span class="o">=</span> <span class="n">df_subset</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
-<span class="n">df_sentiments</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;sentiment&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="s1">&#39;positive&#39;</span><span class="p">,</span> <span class="s1">&#39;neutral&#39;</span><span class="p">,</span> <span class="s1">&#39;negative&#39;</span><span class="p">]})</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">BTC_price</span><span class="p">[</span><span class="s1">&#39;Percent_Change&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">BTC_price</span><span class="o">.</span><span class="n">price_change</span> <span class="o">/</span> <span class="n">BTC_price</span><span class="o">.</span><span class="n">Open</span> 
 </pre></div>
 
      </div>
@@ -15610,10 +14620,10 @@ date maximum 2019-05-27
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[73]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[7]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_temp</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">BTC_price</span><span class="o">.</span><span class="n">tail</span><span class="p">()</span>
 </pre></div>
 
      </div>
@@ -15629,7 +14639,7 @@ date maximum 2019-05-27
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[73]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 
 
 
@@ -15652,138 +14662,71 @@ date maximum 2019-05-27
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>index</th>
+      <th>Unnamed: 0</th>
       <th>date</th>
+      <th>Open</th>
+      <th>Close</th>
+      <th>price_change</th>
+      <th>price_increase_next_day</th>
+      <th>price_chng_max_abs_scale</th>
+      <th>Percent_Change</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>0</td>
-      <td>2017-01-04</td>
+      <th>1876</th>
+      <td>1876</td>
+      <td>2021-03-26</td>
+      <td>51292.65</td>
+      <td>55081.37</td>
+      <td>3788.72</td>
+      <td>True</td>
+      <td>0.414366</td>
+      <td>0.073865</td>
     </tr>
     <tr>
-      <th>1</th>
-      <td>1</td>
-      <td>2017-01-27</td>
+      <th>1877</th>
+      <td>1877</td>
+      <td>2021-03-27</td>
+      <td>55081.26</td>
+      <td>55839.42</td>
+      <td>758.16</td>
+      <td>False</td>
+      <td>-0.057986</td>
+      <td>0.013764</td>
     </tr>
     <tr>
-      <th>2</th>
-      <td>2</td>
-      <td>2017-02-04</td>
+      <th>1878</th>
+      <td>1878</td>
+      <td>2021-03-28</td>
+      <td>55817.85</td>
+      <td>55790.92</td>
+      <td>-26.93</td>
+      <td>True</td>
+      <td>-0.180352</td>
+      <td>-0.000482</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td>3</td>
-      <td>2017-02-06</td>
+      <th>1879</th>
+      <td>1879</td>
+      <td>2021-03-29</td>
+      <td>55790.28</td>
+      <td>57600.10</td>
+      <td>1809.82</td>
+      <td>True</td>
+      <td>0.105929</td>
+      <td>0.032440</td>
     </tr>
     <tr>
-      <th>4</th>
-      <td>4</td>
-      <td>2017-05-24</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>388</th>
-      <td>388</td>
-      <td>2019-05-23</td>
-    </tr>
-    <tr>
-      <th>389</th>
-      <td>389</td>
-      <td>2019-05-24</td>
-    </tr>
-    <tr>
-      <th>390</th>
-      <td>390</td>
-      <td>2019-05-25</td>
-    </tr>
-    <tr>
-      <th>391</th>
-      <td>391</td>
-      <td>2019-05-26</td>
-    </tr>
-    <tr>
-      <th>392</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-    </tr>
-  </tbody>
-</table>
-<p>393 rows × 2 columns</p>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[74]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_sentiments</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[74]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>sentiment</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>positive</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>negative</td>
+      <th>1880</th>
+      <td>1880</td>
+      <td>2021-03-30</td>
+      <td>57623.66</td>
+      <td>58760.59</td>
+      <td>1136.93</td>
+      <td>False</td>
+      <td>0.001051</td>
+      <td>0.019730</td>
     </tr>
   </tbody>
 </table>
@@ -15799,16 +14742,29 @@ date maximum 2019-05-27
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h4 id="Now-we-perform-a-cross-join-of-both-dataframes,-so-every-date-has-a-corresponding-positive,-neutral,-and-negative-sentiment-row">Now we perform a cross-join of both dataframes, so every date has a corresponding <code>positive</code>, <code>neutral</code>, and <code>negative</code> sentiment row<a class="anchor-link" href="#Now-we-perform-a-cross-join-of-both-dataframes,-so-every-date-has-a-corresponding-positive,-neutral,-and-negative-sentiment-row">&#182;</a></h4>
+<blockquote><p>We added the column above for the same reason we added <code>price_chng_max_abs_scale</code>.  When training our model, we don't want it to be influenced by the drastic increase in BTC price over the years.  In other words, since the price of bitcoin has risen over the years, so has its daily price change.  We want our model to see price changes of similar magnitude as <em>similar</em>.  So as an example, if in 2016 the price increased 3 USD on one day and in 2019 increased 300 USD during another day, and these are both increases of say 5%, we want our model to treat those equally.</p>
+</blockquote>
+
+</div>
+</div>
+<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="Merging">Merging<a class="anchor-link" href="#Merging">&#182;</a></h2>
+</div>
+</div>
+<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<p>Now we can merge these two datasets using their shared <code>date</code> column</p>
+
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[75]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[8]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df_crossprod</span> <span class="o">=</span> <span class="n">df_temp</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df_sentiments</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;cross&#39;</span><span class="p">)</span>
-<span class="n">df_crossprod</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">final_merge</span> <span class="o">=</span> <span class="n">BTC_price</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">BTC_tweets</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span> <span class="s1">&#39;date&#39;</span><span class="p">)</span>
+<span class="n">final_merge</span><span class="o">.</span><span class="n">tail</span><span class="p">()</span>
 </pre></div>
 
      </div>
@@ -15824,7 +14780,7 @@ date maximum 2019-05-27
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[75]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[8]:</div>
 
 
 
@@ -15847,81 +14803,116 @@ date maximum 2019-05-27
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>index</th>
+      <th>Unnamed: 0_x</th>
       <th>date</th>
-      <th>sentiment</th>
+      <th>Open</th>
+      <th>Close</th>
+      <th>price_change</th>
+      <th>price_increase_next_day</th>
+      <th>price_chng_max_abs_scale</th>
+      <th>Percent_Change</th>
+      <th>Unnamed: 0_y</th>
+      <th>negative</th>
+      <th>neutral</th>
+      <th>positive</th>
+      <th>percent_neg</th>
+      <th>percent_neu</th>
+      <th>percent_pos</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>positive</td>
+      <th>1418</th>
+      <td>1385.0</td>
+      <td>2019-11-19</td>
+      <td>8176.90</td>
+      <td>8121.63</td>
+      <td>-55.27</td>
+      <td>False</td>
+      <td>-0.184769</td>
+      <td>-0.006759</td>
+      <td>1418</td>
+      <td>4196.0</td>
+      <td>17533.0</td>
+      <td>13243.0</td>
+      <td>0.119982</td>
+      <td>0.501344</td>
+      <td>0.378674</td>
     </tr>
     <tr>
-      <th>1</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>neutral</td>
+      <th>1419</th>
+      <td>1386.0</td>
+      <td>2019-11-20</td>
+      <td>8124.08</td>
+      <td>8088.44</td>
+      <td>-35.64</td>
+      <td>False</td>
+      <td>-0.181710</td>
+      <td>-0.004387</td>
+      <td>1419</td>
+      <td>3762.0</td>
+      <td>17631.0</td>
+      <td>13016.0</td>
+      <td>0.109332</td>
+      <td>0.512395</td>
+      <td>0.378273</td>
     </tr>
     <tr>
-      <th>2</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>negative</td>
+      <th>1420</th>
+      <td>1387.0</td>
+      <td>2019-11-21</td>
+      <td>8085.54</td>
+      <td>7611.51</td>
+      <td>-474.03</td>
+      <td>False</td>
+      <td>-0.250038</td>
+      <td>-0.058627</td>
+      <td>1420</td>
+      <td>4676.0</td>
+      <td>19669.0</td>
+      <td>14791.0</td>
+      <td>0.119481</td>
+      <td>0.502581</td>
+      <td>0.377938</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td>1</td>
-      <td>2017-01-27</td>
-      <td>positive</td>
+      <th>1421</th>
+      <td>1388.0</td>
+      <td>2019-11-22</td>
+      <td>7612.23</td>
+      <td>7285.85</td>
+      <td>-326.38</td>
+      <td>True</td>
+      <td>-0.227025</td>
+      <td>-0.042876</td>
+      <td>1421</td>
+      <td>5350.0</td>
+      <td>21036.0</td>
+      <td>14579.0</td>
+      <td>0.130599</td>
+      <td>0.513512</td>
+      <td>0.355889</td>
     </tr>
     <tr>
-      <th>4</th>
-      <td>1</td>
-      <td>2017-01-27</td>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>1174</th>
-      <td>391</td>
-      <td>2019-05-26</td>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>1175</th>
-      <td>391</td>
-      <td>2019-05-26</td>
-      <td>negative</td>
-    </tr>
-    <tr>
-      <th>1176</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>positive</td>
-    </tr>
-    <tr>
-      <th>1177</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>neutral</td>
-    </tr>
-    <tr>
-      <th>1178</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>negative</td>
+      <th>1422</th>
+      <td>1389.0</td>
+      <td>2019-11-23</td>
+      <td>7276.21</td>
+      <td>7320.39</td>
+      <td>44.18</td>
+      <td>False</td>
+      <td>-0.169269</td>
+      <td>0.006072</td>
+      <td>1422</td>
+      <td>2081.0</td>
+      <td>10171.0</td>
+      <td>7178.0</td>
+      <td>0.107102</td>
+      <td>0.523469</td>
+      <td>0.369429</td>
     </tr>
   </tbody>
 </table>
-<p>1179 rows × 3 columns</p>
 </div>
 </div>
 
@@ -15934,16 +14925,18 @@ date maximum 2019-05-27
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h4 id="We-can-now-perform-a-left-merge-on-our-original-groupby-and-crossproduct-dataframes-to-add-the-missing-categories">We can now perform a left merge on our original groupby and crossproduct dataframes to add the missing categories<a class="anchor-link" href="#We-can-now-perform-a-left-merge-on-our-original-groupby-and-crossproduct-dataframes-to-add-the-missing-categories">&#182;</a></h4>
+<h3 id="Let's-reorder-the-columns-and-get-rid-of-those-that-we-don't-need">Let's reorder the columns and get rid of those that we don't need<a class="anchor-link" href="#Let's-reorder-the-columns-and-get-rid-of-those-that-we-don't-need">&#182;</a></h3>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[76]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[9]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">groupby_merge</span> <span class="o">=</span> <span class="n">df_crossprod</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df_groupby</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">])</span>
-<span class="n">groupby_merge</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">final</span> <span class="o">=</span> <span class="n">final_merge</span><span class="p">[[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;Open&#39;</span><span class="p">,</span> <span class="s1">&#39;Close&#39;</span><span class="p">,</span> <span class="s1">&#39;price_change&#39;</span><span class="p">,</span> <span class="s1">&#39;Percent_Change&#39;</span><span class="p">,</span> 
+                     <span class="s1">&#39;price_chng_max_abs_scale&#39;</span><span class="p">,</span> <span class="s1">&#39;negative&#39;</span><span class="p">,</span> 
+                     <span class="s1">&#39;neutral&#39;</span><span class="p">,</span> <span class="s1">&#39;positive&#39;</span><span class="p">,</span> <span class="s1">&#39;percent_neg&#39;</span><span class="p">,</span> <span class="s1">&#39;percent_neu&#39;</span><span class="p">,</span> <span class="s1">&#39;percent_pos&#39;</span><span class="p">,</span> <span class="s1">&#39;price_increase_next_day&#39;</span><span class="p">]]</span>
+<span class="n">final</span>
 </pre></div>
 
      </div>
@@ -15959,7 +14952,7 @@ date maximum 2019-05-27
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[76]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[9]:</div>
 
 
 
@@ -15982,195 +14975,101 @@ date maximum 2019-05-27
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>index</th>
       <th>date</th>
-      <th>sentiment</th>
-      <th>id</th>
+      <th>Open</th>
+      <th>Close</th>
+      <th>price_change</th>
+      <th>Percent_Change</th>
+      <th>price_chng_max_abs_scale</th>
+      <th>negative</th>
+      <th>neutral</th>
+      <th>positive</th>
+      <th>percent_neg</th>
+      <th>percent_neu</th>
+      <th>percent_pos</th>
+      <th>price_increase_next_day</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>positive</td>
-      <td>NaN</td>
+      <td>2016-01-01</td>
+      <td>430.89</td>
+      <td>433.82</td>
+      <td>2.93</td>
+      <td>0.006800</td>
+      <td>-0.175698</td>
+      <td>32.0</td>
+      <td>322.0</td>
+      <td>38.0</td>
+      <td>0.081633</td>
+      <td>0.821429</td>
+      <td>0.096939</td>
+      <td>False</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>neutral</td>
-      <td>1.0</td>
+      <td>2016-01-02</td>
+      <td>434.87</td>
+      <td>433.55</td>
+      <td>-1.32</td>
+      <td>-0.003035</td>
+      <td>-0.176360</td>
+      <td>39.0</td>
+      <td>222.0</td>
+      <td>17.0</td>
+      <td>0.140288</td>
+      <td>0.798561</td>
+      <td>0.061151</td>
+      <td>False</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>negative</td>
-      <td>NaN</td>
+      <td>2016-01-03</td>
+      <td>433.20</td>
+      <td>431.04</td>
+      <td>-2.16</td>
+      <td>-0.004986</td>
+      <td>-0.176491</td>
+      <td>36.0</td>
+      <td>142.0</td>
+      <td>3.0</td>
+      <td>0.198895</td>
+      <td>0.784530</td>
+      <td>0.016575</td>
+      <td>True</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>1</td>
-      <td>2017-01-27</td>
-      <td>positive</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>1</td>
-      <td>2017-01-27</td>
-      <td>neutral</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>1174</th>
-      <td>391</td>
-      <td>2019-05-26</td>
-      <td>neutral</td>
-      <td>18.0</td>
-    </tr>
-    <tr>
-      <th>1175</th>
-      <td>391</td>
-      <td>2019-05-26</td>
-      <td>negative</td>
+      <td>2016-01-04</td>
+      <td>431.54</td>
+      <td>434.17</td>
+      <td>2.63</td>
+      <td>0.006094</td>
+      <td>-0.175745</td>
+      <td>38.0</td>
+      <td>165.0</td>
       <td>5.0</td>
-    </tr>
-    <tr>
-      <th>1176</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>positive</td>
-      <td>443.0</td>
-    </tr>
-    <tr>
-      <th>1177</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>neutral</td>
-      <td>670.0</td>
-    </tr>
-    <tr>
-      <th>1178</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>negative</td>
-      <td>98.0</td>
-    </tr>
-  </tbody>
-</table>
-<p>1179 rows × 4 columns</p>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>Fill <code>NaN</code> values with zero</p>
-
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[77]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">groupby_merge</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">groupby_merge</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">groupby_merge</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[77]:</div>
-
-
-
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>index</th>
-      <th>date</th>
-      <th>sentiment</th>
-      <th>id</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>positive</td>
-      <td>0.0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>neutral</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>0</td>
-      <td>2017-01-04</td>
-      <td>negative</td>
-      <td>0.0</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>1</td>
-      <td>2017-01-27</td>
-      <td>positive</td>
-      <td>0.0</td>
+      <td>0.182692</td>
+      <td>0.793269</td>
+      <td>0.024038</td>
+      <td>False</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>1</td>
-      <td>2017-01-27</td>
-      <td>neutral</td>
-      <td>1.0</td>
+      <td>2016-01-05</td>
+      <td>433.31</td>
+      <td>432.43</td>
+      <td>-0.88</td>
+      <td>-0.002031</td>
+      <td>-0.176292</td>
+      <td>36.0</td>
+      <td>122.0</td>
+      <td>4.0</td>
+      <td>0.222222</td>
+      <td>0.753086</td>
+      <td>0.024691</td>
+      <td>False</td>
     </tr>
     <tr>
       <th>...</th>
@@ -16178,45 +15077,99 @@ date maximum 2019-05-27
       <td>...</td>
       <td>...</td>
       <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
     </tr>
     <tr>
-      <th>1174</th>
-      <td>391</td>
-      <td>2019-05-26</td>
-      <td>neutral</td>
-      <td>18.0</td>
+      <th>1418</th>
+      <td>2019-11-19</td>
+      <td>8176.90</td>
+      <td>8121.63</td>
+      <td>-55.27</td>
+      <td>-0.006759</td>
+      <td>-0.184769</td>
+      <td>4196.0</td>
+      <td>17533.0</td>
+      <td>13243.0</td>
+      <td>0.119982</td>
+      <td>0.501344</td>
+      <td>0.378674</td>
+      <td>False</td>
     </tr>
     <tr>
-      <th>1175</th>
-      <td>391</td>
-      <td>2019-05-26</td>
-      <td>negative</td>
-      <td>5.0</td>
+      <th>1419</th>
+      <td>2019-11-20</td>
+      <td>8124.08</td>
+      <td>8088.44</td>
+      <td>-35.64</td>
+      <td>-0.004387</td>
+      <td>-0.181710</td>
+      <td>3762.0</td>
+      <td>17631.0</td>
+      <td>13016.0</td>
+      <td>0.109332</td>
+      <td>0.512395</td>
+      <td>0.378273</td>
+      <td>False</td>
     </tr>
     <tr>
-      <th>1176</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>positive</td>
-      <td>443.0</td>
+      <th>1420</th>
+      <td>2019-11-21</td>
+      <td>8085.54</td>
+      <td>7611.51</td>
+      <td>-474.03</td>
+      <td>-0.058627</td>
+      <td>-0.250038</td>
+      <td>4676.0</td>
+      <td>19669.0</td>
+      <td>14791.0</td>
+      <td>0.119481</td>
+      <td>0.502581</td>
+      <td>0.377938</td>
+      <td>False</td>
     </tr>
     <tr>
-      <th>1177</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>neutral</td>
-      <td>670.0</td>
+      <th>1421</th>
+      <td>2019-11-22</td>
+      <td>7612.23</td>
+      <td>7285.85</td>
+      <td>-326.38</td>
+      <td>-0.042876</td>
+      <td>-0.227025</td>
+      <td>5350.0</td>
+      <td>21036.0</td>
+      <td>14579.0</td>
+      <td>0.130599</td>
+      <td>0.513512</td>
+      <td>0.355889</td>
+      <td>True</td>
     </tr>
     <tr>
-      <th>1178</th>
-      <td>392</td>
-      <td>2019-05-27</td>
-      <td>negative</td>
-      <td>98.0</td>
+      <th>1422</th>
+      <td>2019-11-23</td>
+      <td>7276.21</td>
+      <td>7320.39</td>
+      <td>44.18</td>
+      <td>0.006072</td>
+      <td>-0.169269</td>
+      <td>2081.0</td>
+      <td>10171.0</td>
+      <td>7178.0</td>
+      <td>0.107102</td>
+      <td>0.523469</td>
+      <td>0.369429</td>
+      <td>False</td>
     </tr>
   </tbody>
 </table>
-<p>1179 rows × 4 columns</p>
+<p>1423 rows × 13 columns</p>
 </div>
 </div>
 
@@ -16229,86 +15182,16 @@ date maximum 2019-05-27
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>Great! Now we've gotten the data to a point where we can use it for our model.  However, this was just for 100,000 rows out of <strong>16 million</strong>.</p>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<hr>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h2 id="Cleaning-in-chunks">Cleaning in chunks<a class="anchor-link" href="#Cleaning-in-chunks">&#182;</a></h2>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Let's-see-if-we-can-clean-the-data-like-we-did-above-while-dividing-it-into-smaller-more-manageable-chunks">Let's see if we can clean the data like we did above while dividing it into smaller more manageable chunks<a class="anchor-link" href="#Let's-see-if-we-can-clean-the-data-like-we-did-above-while-dividing-it-into-smaller-more-manageable-chunks">&#182;</a></h3>
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>If we put all of the steps above into a function, we can easily clean multiple chunks the same way.  All the function needs is a starting dataframe and two file names for each of the csv output files</p>
-
+<h2 id="Export-Data">Export Data<a class="anchor-link" href="#Export-Data">&#182;</a></h2>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[78]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[10]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">clean_data</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">filename1</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename2</span> <span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-
-    <span class="c1">## Converting timestamp column to a datetime object</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;timestamp&quot;</span><span class="p">])</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span>
-
-
-    <span class="c1">## Removing non-english tweets</span>
-    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;english&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">isascii</span><span class="p">())</span>
-
-    
-    <span class="c1">## Selecting relevant columns</span>
-    <span class="n">df_subset</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">english</span> <span class="o">==</span> <span class="kc">True</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;english&quot;</span><span class="p">]]</span>
-
-    
-    <span class="c1">## We only want dates &gt;= 2016-01-01 because this is start date of when data was being collected.  Anything earlier is likely incorrect</span>
-    <span class="n">df_subset</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[</span><span class="n">df_subset</span><span class="o">.</span><span class="n">date</span> <span class="o">&gt;=</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
-
-
-    <span class="c1">## Cleaning tweets for sentiment analysis</span>
-    <span class="n">clean_tweet</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;(@[A-Za-z0-9]+)|([^0-9A-Za-z </span><span class="se">\t</span><span class="s2">])|(\w+:\/\/\S+)&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
-    <span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;clean_text&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_subset</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">clean_tweet</span><span class="p">)</span>
-
-
-    <span class="c1">## Getting tweet sentiment</span>
-    <span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;sentiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_subset</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">get_tweet_sentiment</span><span class="p">)</span>
-
-
-    <span class="c1">## The code below makes the pandas groupby dataframe show values for categories that have zero entries</span>
-    <span class="c1">## e.g. a date might have 3 positive, 10 neutral, and 0 negative tweets.  This mean the groupby will only show the positive and neutral categories, </span>
-    <span class="c1">## since none of the tweet are negative </span>
-
-    <span class="n">df_temp</span> <span class="o">=</span> <span class="n">df_subset</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
-    <span class="n">df_sentiments</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;sentiment&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="s1">&#39;positive&#39;</span><span class="p">,</span> <span class="s1">&#39;neutral&#39;</span><span class="p">,</span> <span class="s1">&#39;negative&#39;</span><span class="p">]})</span>
-
-    <span class="n">df_crossprod</span> <span class="o">=</span> <span class="n">df_temp</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df_sentiments</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;cross&#39;</span><span class="p">)</span>
-
-    <span class="n">df_groupby</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
-
-    <span class="n">groupby_merge</span> <span class="o">=</span> <span class="n">df_crossprod</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df_groupby</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;sentiment&#39;</span><span class="p">])</span>
-    <span class="n">groupby_merge</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">groupby_merge</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-    
-    
-    <span class="c1">## Export dataframes as csv files</span>
-    <span class="n">df_subset</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">filename1</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;;&quot;</span><span class="p">)</span>
-    <span class="n">groupby_merge</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">filename2</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;;&quot;</span><span class="p">)</span>
-
-    
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%</span><span class="k">script</span> false --no-raise-error
+final.to_csv(&#39;../Cleaned_Data/final.csv&#39;)
 </pre></div>
 
      </div>
@@ -16316,81 +15199,6 @@ date maximum 2019-05-27
 </div>
 </div>
 
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Now-that-we-have-a-function,-we-can-load-the-data-in-chunks-and-clean-each-seperately">Now that we have a function, we can load the data in chunks and clean each seperately<a class="anchor-link" href="#Now-that-we-have-a-function,-we-can-load-the-data-in-chunks-and-clean-each-seperately">&#182;</a></h3>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[81]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">batch_num</span> <span class="o">=</span> <span class="mi">1</span>
-<span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/tweets_ordered.csv&#39;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">chunksize</span><span class="o">=</span> <span class="mi">100000</span><span class="p">):</span><span class="c1">#1000000):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Starting batch number:&#39;</span><span class="p">,</span> <span class="n">batch_num</span><span class="p">,</span> <span class="s1">&#39;--------------------------------------------------------------------------&#39;</span><span class="p">)</span>
-    <span class="n">file1</span> <span class="o">=</span> <span class="s1">&#39;data_chunk&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">batch_num</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.csv&#39;</span>
-    <span class="n">file2</span> <span class="o">=</span> <span class="s1">&#39;groupby_chunk&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">batch_num</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.csv&#39;</span>
-    <span class="n">clean_data</span><span class="p">(</span><span class="n">filename1</span> <span class="o">=</span> <span class="n">file1</span><span class="p">,</span> <span class="n">filename2</span> <span class="o">=</span> <span class="n">file2</span><span class="p">,</span> <span class="n">df</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Done with batch&#39;</span><span class="p">,</span> <span class="n">batch_num</span><span class="p">,</span> <span class="s1">&#39;--------------------------------------------------------------------------&#39;</span><span class="p">)</span>
-    <span class="n">batch_num</span> <span class="o">+=</span> <span class="mi">1</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n\n\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
-
-
-    <span class="k">break</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-
-<div class="jp-OutputArea-child">
-
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-
-
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>Starting batch number: 1 --------------------------------------------------------------------------
-Done with batch 1 --------------------------------------------------------------------------
-
-
-
-
-
-</pre>
-</div>
-</div>
-
-</div>
-
-</div>
-
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>We will only show the output for processing one chunk because the code takes a while to run for the entire set.</p>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>Once we have cleaned each chunk, we can repeatedly merge them together until we have one unified dataset.  We will do this in the next notebook.  Fortunately, this final dataset should be much smaller the original 16 million data points.</p>
-
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<hr>
-
-</div>
 </div>
 </body>
 
